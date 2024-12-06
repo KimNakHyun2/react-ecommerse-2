@@ -204,9 +204,69 @@ app.post('/login', async (req, res)=>{
         }
     }
     else {
-        res.json({success: false, error:"Wrong Email"});
+        res.json({success: false, error:"Wrong Email Id"});
     }
 });
+
+//creating endpoint for newcollection
+app.get('/newcollections', async(req, res)=>{
+    let products = await Product.find({});
+    let newcollection = products.slice(1).slice(-8);
+    console.log("NewCollection Fetched");
+    res.send(newcollection);
+})
+
+// popular in women section
+app.get('/popularinwomen', async(req, res)=>{
+    let products = await Product.find({category:"women"});
+    let popular_in_women = products.slice(0, 4);
+    console.log("Popular in women fetched");
+    res.send(popular_in_women);
+})
+
+const fetchUser = async(req, res, next)=>{
+    const token=req.header('auth-token');
+    if(!token){
+        res.status(401).send({errors: "please authenticate using valid token"})
+    }
+    else{
+        try{
+            const data = jwt.verify(token, 'secret_ecom');
+            req.user = data.user;
+            next();
+        }
+        catch(error){
+            req.status(401).send({errors:"please authenticate using a valid token"})
+        }
+    }
+}
+
+app.post('/addtocart', fetchUser, async(req, res)=>{
+    console.log("Added to cart", req.body.itemId);
+    let userData = await Users.findOne({_id:req.user.id});
+    userData.cartData[req.body.itemId] += 1;
+    await Users.findOneAndUpdate({_id:req.user.id}, {cartData:userData.cartData})
+    res.send("Added");
+})
+
+
+app.post('/removefromcart', fetchUser, async(req, res)=>{
+    console.log("Removed from cart", req.body.itemId);
+    let userData = await Users.findOne({_id:req.user.id});
+
+    if(userData.cartData[req.body.itemId]>0){
+
+    }
+    userData.cartData[req.body.itemId] -= 1;
+    await Users.findOneAndUpdate({_id:req.user.id}, {cartData:userData.cartData})
+    res.send("Added");
+})
+
+app.post('/getcart', fetchUser, async(req, res)=>{
+    console.log("GetCart");
+    let userData = await Users.findOne({_id: req.user.id});
+    res.json(userData.cartData);
+})
 
 app.listen(port,(error)=>{
     if(!error){
